@@ -31,9 +31,8 @@ def get_movies_by_year
               AS Genre, studios.name AS Studio FROM movies
               JOIN genres ON genres.id = movies.genre_id
               LEFT OUTER JOIN studios ON studios.id = movies.studio_id
-              ORDER BY movies.year')
+              ORDER BY movies.year DESC, movies.title')
   end.to_a
-
 end
 
 
@@ -44,20 +43,79 @@ def get_movies_by_rating
               AS Genre, studios.name AS Studio FROM movies
               JOIN genres ON genres.id = movies.genre_id
               LEFT OUTER JOIN studios ON studios.id = movies.studio_id
-              ORDER BY movies.rating')
+              ORDER BY movies.rating DESC, movies.title')
   end.to_a
-
 end
 
+def get_movies_by_title_paginated(page_number)
+  db_conn do |conn|
+    conn.exec('SELECT movies.id AS id, movies.title AS Title, movies.year
+              AS Year, movies.rating AS Rating, genres.name
+              AS Genre, studios.name AS Studio FROM movies
+              JOIN genres ON genres.id = movies.genre_id
+              LEFT OUTER JOIN studios ON studios.id = movies.studio_id
+              ORDER BY movies.title
+              LIMIT 20 OFFSET $1', [(page_number - 1) * 20])
+  end.to_a
+end
+
+def get_movies_by_year_paginated(page_number)
+  db_conn do |conn|
+    conn.exec('SELECT movies.id AS id, movies.title AS Title, movies.year
+              AS Year, movies.rating AS Rating, genres.name
+              AS Genre, studios.name AS Studio FROM movies
+              JOIN genres ON genres.id = movies.genre_id
+              LEFT OUTER JOIN studios ON studios.id = movies.studio_id
+              ORDER BY movies.year DESC, movies.title
+              LIMIT 20 OFFSET $1', [(page_number - 1) * 20])
+  end.to_a
+end
+
+def get_movies_by_rating_paginated(page_number)
+  db_conn do |conn|
+    conn.exec_params('SELECT movies.id AS id, movies.title AS Title, movies.year
+              AS Year, movies.rating AS Rating, genres.name
+              AS Genre, studios.name AS Studio FROM movies
+              JOIN genres ON genres.id = movies.genre_id
+              LEFT OUTER JOIN studios ON studios.id = movies.studio_id
+              ORDER BY movies.rating DESC, movies.title
+              LIMIT 20 OFFSET $1', [(page_number - 1) * 20])
+  end.to_a
+end
+
+def movie_title_search(query)
+  db_conn do |conn|
+    conn.exec_params('SELECT * FROM movies
+                      WHERE to_tsvector(title)
+                      @@ plainto_tsquery($1)', [query])
+  end.to_a
+end
+
+
 get '/movies' do
-  if params[:order] == 'year'
-    @arr_of_movies = get_movies_by_year
-  elsif params[:order] == 'rating'
-    @arr_of_movies = get_movies_by_rating
-  elsif params[:order] == 'title'
-    @arr_of_movies = get_movies_by_title
-  else
-    @arr_of_movies = get_movies_by_title
+  @page = params[:page].to_i
+  query = params[:query]
+
+  if query != nil
+      @arr_of_movies = get_movies_by_year
+
+  elsif @page <= 0
+    if params[:order] == 'year'
+      @arr_of_movies = get_movies_by_year
+    elsif params[:order] == 'rating'
+      @arr_of_movies = get_movies_by_rating
+    else
+      @arr_of_movies = get_movies_by_title
+    end
+  else @page > 0
+    @ol_start = ((@page - 1) * 20) + 1
+    if params[:order] == 'year'
+      @arr_of_movies = get_movies_by_year_paginated(@page)
+    elsif params[:order] == 'rating'
+      @arr_of_movies = get_movies_by_rating_paginated(@page)
+    else
+      @arr_of_movies = get_movies_by_title_paginated(@page)
+    end
   end
   erb :'movies/movies_index'
 end

@@ -1,4 +1,4 @@
-<ol>
+<ol start=<%= @ol_start %>>
   <% @arr_of_movies.each do |movie| %>
     <li>
       <a href="movies/<%= movie['id'] %>"><%= "#{movie['title']}</a>,
