@@ -94,8 +94,9 @@ end
 
 def get_all_actors
   db_conn do |conn|
-    conn.exec('SELECT actors.id AS id, actors.name AS Name
-              FROM actors ORDER BY actors.name')
+    conn.exec('SELECT actors.id AS id, actors.name AS Name, count(*) AS roles
+              FROM actors JOIN cast_members ON cast_members.actor_id = actors.id
+              GROUP BY actors.id ORDER BY actors.name')
   end.to_a
 end
 
@@ -120,12 +121,11 @@ end
 
 def search_for_actor_or_role(query)
   db_conn do |conn|
-    conn.exec_params('SELECT actors.id AS id, actors.name AS Name
-                      FROM actors
-                      JOIN cast_members ON actors.id = cast_members.actor_id
+    conn.exec_params('SELECT actors.id AS id, actors.name AS Name, count(*) AS roles
+                      FROM actors JOIN cast_members ON actors.id = cast_members.actor_id
                       WHERE to_tsvector(actors.name) @@ plainto_tsquery($1)
                       OR to_tsvector(cast_members.character) @@ plainto_tsquery($1)
-                      ORDER BY actors.name',
+                      GROUP BY actors.id ORDER BY actors.name',
                       [query])
   end.to_a
 end
