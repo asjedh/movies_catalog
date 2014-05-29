@@ -86,8 +86,9 @@ end
 def movie_title_search(query)
   db_conn do |conn|
     conn.exec_params('SELECT * FROM movies
-                      WHERE to_tsvector(title)
-                      @@ plainto_tsquery($1)', [query])
+                      WHERE to_tsvector(title) @@ plainto_tsquery($1)
+                      OR to_tsvector(synopsis) @@ plainto_tsquery($1)',
+                      [query])
   end.to_a
 end
 
@@ -97,8 +98,7 @@ get '/movies' do
   query = params[:query]
 
   if query != nil
-      @arr_of_movies = get_movies_by_year
-
+    @arr_of_movies = movie_title_search(query)
   elsif @page <= 0
     if params[:order] == 'year'
       @arr_of_movies = get_movies_by_year
