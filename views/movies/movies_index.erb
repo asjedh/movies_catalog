@@ -1,0 +1,9 @@
+<ol>
+  <% @arr_of_movies.each do |movie| %>
+    <li>
+      <a href="movies/<%= movie['id'] %>"><%= "#{movie['title']}</a>,
+      Rating: #{movie['rating']}, Year: #{movie['year']},
+      Genre: #{movie['genre']}, Studio: #{movie['studio']}" %>
+    </li>
+  <% end %>
+</ol>

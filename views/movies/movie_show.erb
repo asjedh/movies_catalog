@@ -1,0 +1,19 @@
+<h2><%= @movie_info[0]['title'] %> </h2>
+
+<p>Genre: <%= @movie_info[0]['genre'] %>, Studio: <%= @movie_info[0]['studio'] %> </p>
+
+<p>Synopsis: <%= @movie_info[0]['synopsis'] %> </p>
+
+
+
+<h4>Cast Members</h4>
+
+<ul>
+  <% @cast_info.each do |character| %>
+    <li>
+    Actor: <a href="/actors/<%= character['actor_id'] %>"><%= character['actor_name'] %></a>,
+     Character: <%= character['character'] %>
+    </li>
+  <% end %>
+
+</ul>

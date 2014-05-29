@@ -1,0 +1,7 @@
+<ol>
+  <% @arr_of_actors.each do |actor| %>
+    <li>
+      <a href="/actors/<%= actor['id'] %>"><%= actor['name'] %> </a>
+    </li>
+  <% end %>
+</ol>
