@@ -92,6 +92,46 @@ def movie_title_search(query)
   end.to_a
 end
 
+def get_all_actors
+  db_conn do |conn|
+    conn.exec('SELECT actors.id AS id, actors.name AS Name
+              FROM actors ORDER BY actors.name')
+  end.to_a
+end
+
+def get_info_for_actor(actor_id)
+  db_conn do |conn|
+    conn.exec_params("SELECT actors.name AS name, cast_members.character AS Character,
+              movies.id AS movie_id, movies.title AS Title FROM actors
+              JOIN cast_members ON cast_members.actor_id = actors.id
+              JOIN movies ON cast_members.movie_id = movies.id
+              WHERE actors.id = $1
+              ORDER BY movies.title", [actor_id])
+  end.to_a
+end
+
+def get_actor_name(actor_id)
+  db_conn do |conn|
+    conn.exec_params("SELECT actors.name AS name
+                    FROM actors
+                    WHERE actors.id = $1", [actor_id])
+  end.to_a[0]['name']
+end
+
+def search_for_actor_or_role(query)
+  db_conn do |conn|
+    conn.exec_params('SELECT actors.id AS id, actors.name AS Name
+                      FROM actors
+                      JOIN cast_members ON actors.id = cast_members.actor_id
+                      WHERE to_tsvector(actors.name) @@ plainto_tsquery($1)
+                      OR to_tsvector(cast_members.character) @@ plainto_tsquery($1)
+                      ORDER BY actors.name',
+                      [query])
+  end.to_a
+end
+
+
+#### END OF METHODS
 
 get '/movies' do
   @page = params[:page].to_i
@@ -107,6 +147,7 @@ get '/movies' do
     else
       @arr_of_movies = get_movies_by_title
     end
+
   else @page > 0
     @ol_start = ((@page - 1) * 20) + 1
     if params[:order] == 'year'
@@ -121,29 +162,23 @@ get '/movies' do
 end
 
 get '/actors' do
-  @arr_of_actors = db_conn do |conn|
-    conn.exec('SELECT actors.id AS id, actors.name AS Name
-              FROM actors ORDER BY actors.name')
-  end.to_a
+  @query = params[:query]
+  if @query != nil
+    @arr_of_actors = search_for_actor_or_role(@query)
+  else
+    @arr_of_actors = get_all_actors
+  end
   erb :'actors/actors_index'
 end
 
 get '/actors/:id' do
-  @actor_id = params[:id]
+  actor_id = params[:id]
   # I want the actors name, all the movies he/she played in, the character they player, and the movie id
-  @actor_info = db_conn do |conn|
-    conn.exec_params("SELECT actors.name AS name, cast_members.character AS Character,
-              movies.id AS movie_id, movies.title AS Title FROM actors
-              JOIN cast_members ON cast_members.actor_id = actors.id
-              JOIN movies ON cast_members.movie_id = movies.id
-              WHERE actors.id = $1
-              ORDER BY movies.title", [@actor_info])
-  end.to_a
+  @actor_info = get_info_for_actor(actor_id)
 
-  @actor_name = @actor_info[0]['name']
+  @actor_name = get_actor_name(actor_id)
 
   erb :'actors/actor_show'
-
 end
 
 
